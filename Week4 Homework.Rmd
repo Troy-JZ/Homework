@@ -1,0 +1,37 @@
+---
+title: "Week4 Homework"
+author: "Zhu Jinzhou"
+date: "2024-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+library(sf)
+library(tidyverse)
+```
+
+```{r pressure, echo=FALSE}
+Shape <- st_read("/Users/troy/Desktop/GIS Practice/Week4/World_Countries_(Generalized)_2402777631520798174/World_Countries_Generalized.shp")
+csv <- read_csv("/Users/troy/Desktop/GIS Practice/Week4/HDR23-24_Composite_indices_complete_time_series.csv")
+head(Shape, n=10)
+head(csv, n=10)
+```
+```{r}
+Shape2 <- Shape %>%
+  merge(.,
+        csv,
+        by.x="COUNTRY",
+        by.y="country")
+
+Shape3 <- Shape2 %>%
+  mutate(column_of_difference = gdi_2019-gdi_2010)
+
+Shape3$column_of_difference
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
