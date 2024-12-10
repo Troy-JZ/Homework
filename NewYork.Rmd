@@ -1,6 +1,7 @@
 ---
-title: "A Study of Eviction Events Based on Spatial Data Analysis"
-author: "Zhu Jinzhou"
+title: "A Study of New York Eviction Events Based on Spatial Data Analysis"
+author: "Name: Zhu Jinzhou"
+Student number: 24080728
 output: html_document
 ---
 # Originality declaration  
