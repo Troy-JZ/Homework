@@ -86,7 +86,7 @@ ppp(x=points_sub_2020_projected_sp@coords[,1],
     y=points_sub_2020_projected_sp@coords[,2],
     window =window)
 ```
-I use Ripley's K to explore whether eviction events clustered in certain areas.
+I use Ripley's K to explore whether eviction events clustered in certain areas. I don't want to use quadrat analysis because it has too many limitations.
 ```{r}
 #Plot Ripley’s K function to analyze spatial clustering or uniform distribution of point patterns
 K <- points_sub_2020_projected_sp.ppp %>% 
@@ -95,7 +95,7 @@ K <- points_sub_2020_projected_sp.ppp %>%
 ```
 This shows that this incident has obvious clustering characteristics.
 
-Ripley's K analyses are useful exploratory techniques that can tell us if there is spatial clustering in our point data, but they cannot tell us where the clustering occurs in the area we are interested in. That is why we need to use DBSCAN. This method helps to find densely clustered areas and effectively identify noise (i.e. points that do not belong to any cluster).
+Ripley's K analyses are useful exploratory techniques that can tell us if there is spatial clustering in our point data, but they cannot tell us where the clustering occurs in the area we are interested in. That is why I need to use DBSCAN. This method helps to find densely clustered areas and effectively identify noise (i.e. points that do not belong to any cluster).
 ```{r}
 library(sp)
 library(dbscan)
