@@ -1,7 +1,7 @@
 ---
 title: "A Study of New York Eviction Events Based on Spatial Data Analysis"
 author: "Name: Zhu Jinzhou"
-Student number: 24080728
+student number: 24080728
 output: html_document
 ---
 # Originality declaration  
@@ -220,7 +220,7 @@ tm_shape(points_sf_joined) +
 In the picture, evictions are more concentrated in the darker areas of Uptown New York than in other areas.
 
 # Results and discussion
-From the analysis results, we can draw the following key conclusions:1) Spatial Clustering of Eviction Events: Through DBSCAN clustering analysis and Local Moran's I test, we found a clear spatial clustering of eviction events in certain community areas in 2020. In particular, eviction events occurred at higher rates in certain high-density clustered areas. 2) High-High and Low-Low Areas: The Local Moran's I analysis revealed the spatial distribution characteristics of high-density eviction areas (high-high) and low-density eviction areas (low-low). This provides policymakers with clues about areas that may require more attention. 3) Regional Density Differences: The differences in eviction event density across various community areas provide data support for further research and understanding of the socioeconomic context of eviction events.
+From the analysis results, I can draw the following key conclusions:1) Spatial Clustering of Eviction Events: Through DBSCAN clustering analysis and Local Moran's I test, I found a clear spatial clustering of eviction events in certain community areas in 2020. In particular, eviction events occurred at higher rates in certain high-density clustered areas. 2) High-High and Low-Low Areas: The Local Moran's I analysis revealed the spatial distribution characteristics of high-density eviction areas (high-high) and low-density eviction areas (low-low). This provides policymakers with clues about areas that may require more attention. 3) Regional Density Differences: The differences in eviction event density across various community areas provide data support for further research and understanding of the socioeconomic context of eviction events.
 
 # Conclusion
 This analysis provides an in-depth exploration of the spatial distribution of eviction events in 2020 through spatial clustering and spatial autocorrelation methods. The results indicate that eviction events exhibit significant spatial clustering in certain community areas, with considerable density variations. These findings offer valuable insights for policy-making and social intervention in related fields. Future research could further investigate the socioeconomic factors of eviction events to gain a more comprehensive understanding of the underlying causes of eviction phenomena.
