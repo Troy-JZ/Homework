@@ -31,7 +31,7 @@ eiction_points <- read_csv("/Users/troy/Desktop/UCL/PracticeExam/Evictions.csv",
 
 communty_areas <- st_read("/Users/troy/Desktop/UCL/PracticeExam/Community Districts/geo_export_634c97af-c097-4829-82db-36e4f9d2b899.shp")
 ```
-To ensure that the data has the same projection coordinate system, we transformed all spatial data into the same coordinate reference system (CRS). We then used the tmap package to visualize eviction events and community areas. The graphic shows the distribution of residential eviction events in 2020 by region.
+To ensure that the data has the same projection coordinate system, I transformed all spatial data into the same coordinate reference system (CRS). I then used the tmap package to visualize eviction events and community areas. The graphic shows the distribution of residential eviction events in 2020 by region.
 ```{r}
 points <- eiction_points %>%
   filter(Longitude<0 & Latitude>0)%>%
