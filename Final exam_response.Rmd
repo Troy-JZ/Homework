@@ -1,0 +1,315 @@
+---
+title: "Final exam_response"
+author: "Zhu Jinzhou"
+student number:24080728
+date: "2024-12-13"
+output: html_document
+---
+
+# Originality declaration
+
+I, [**Zhu Jinzhou**], confirm that the work presented in this assessment is my own. Where information has been derived from other sources, I confirm that this has been indicated in the work.
+
+###Introduction
+Pedestrian safety remains a critical concern for urban planners and policymakers, particularly in cities like Charlotte, where high accident rates necessitate targeted interventions.The Charlotte metro’s PDI (pedestrian deaths per 100,000/percentage who walk to work) was 111.74, more than twice as high as the national average of 52.1 (Smart Growth America, 2021). With limited resources of $4.47 million available, identifying high-risk areas and prioritizing safety upgrades is essential to effectively reduce pedestrian-related accidents. This study aims to address this need by examining the spatial distribution of pedestrian accidents and identifying optimal intersections for future infrastructure improvements.
+
+The reseach focused on identifying at-risk areas for pedestrian accidents through kernel density analysis, global Moran's index, and local Moran's index. These methods tested for spatial clustering of pedestrian accidents as well as the statistical significance of spatial patterns, providing insights into areas with higher accident risk. The results provide data-driven recommendations for intersection upgrades, supporting Charlotte's efforts to create safer streets for residents.
+
+### Initial project scope
+The primary objective of this project is to enhance pedestrian safety in Charlotte by implementing targeted interventions such as beacon installations and roadway infrastructure improvements, ultimately aiming to reduce accident rates. To achieve this, the project seeks to identify current high-risk locations and evaluate their validity as priority areas for intervention.
+
+The research is driven by the aim of identifying spatial patterns of accident risk that can guide the City of Charlotte in selecting optimal intersections for future upgrades. To support this goal, the study investigates whether accident occurrences exhibit spatial clustering by conducting a kernel density analysis and calculating spatial autocorrelation metrics, including Moran's I and Local Indicators of Spatial Association (LISA), and assesses the statistical significance of spatial similarities in crash distributions.
+
+My null hypothesis is that pedestrian crashes in the city are spatially randomly distributed; the alternative hypothesis is that pedestrian crashes in the city are spatially clustered or dispersed. This project will provide important insights into spatial crash patterns and provide evidence-based recommendations for transportation infrastructure upgrades to improve pedestrian safety.
+
+# Start your response here
+###01 Load all possible packages
+```{r}
+# load packages
+library(tidyverse)
+library(sf)
+library(sp)
+library(spdep)
+library(spatstat)
+library(spgwr)
+library(janitor)
+library(here)
+library(tmap)
+library(broom)
+library(performance)
+library(car)
+```
+
+###02 Import data downloaded online
+There are four files in total. injury_crash is about the type and location of the accident, potential point is the location of the safe street construction currently decided to use, tract is the administrative division data of the census, and commuting block is the commuting block situation for traffic.
+
+First check the data fields.
+For example:injury_crash file (accident data)
+LATITUDE and LONGITUDE: used for spatial analysis to determine the geographic coordinates of the accident site.
+CRASH_TYPE: accident type, which helps to identify whether certain types of accidents are more concentrated in certain areas.
+DATE_VAL_1: accident date, which can be used to analyze the trend of accidents over time.
+
+potential_point file (proposed traffic point)
+LATITUDE and LONGITUDE: also used for spatial analysis to determine the geographic coordinates of the proposed traffic point.
+ProjectName and ProjectType: project name and type, which helps to understand the relevance of these points to pedestrian safety projects.
+
+census_tracts file (census tracts)
+STATEFP, COUNTYFP, and TRACTCE: These fields identify the state, county, and census tract codes, which can be used to filter data for specific areas.
+INTPTLAT and INTPTLON: The coordinates of the center point of the census tract, which can be used for spatial analysis.
+
+commuting_block file (commuting block groups)
+STATEFP10, COUNTYFP10, and TRACTCE10: These fields identify the state, county, and census tract codes, which can be used to filter data for specific areas.
+geoname: Place names, which help identify specific commuting block groups.
+
+Afterwards, make sure the projected coordinate system of the data used is consistent.
+The best selection point for this project is to choose a location with a higher risk of accidents.
+```{r}
+# load data
+injury_crash <- st_read(here::here("01 Fatal_or_Serious_Injury_Crashes/","Fatal_or_Serious_Injury_Crashes.shp"))
+
+potential_point <- st_read(here::here("02 Safe_Streets_For_All_Grant_Projects/","Safe_Streets_For_All_Grant_Projects.shp"))
+
+tract <- st_read(here::here("04 tl_2024_37_tract/","tl_2024_37_tract.shp"))
+
+commuting_block <- st_read(here::here("05 Census_Commuting_Block_Groups/","Census_Commuting_Block_Groups.shp"))
+
+# check data types
+injury_crash %>% 
+    st_drop_geometry%>% 
+    summarise_all(class) %>%
+    pivot_longer(everything(),   
+                 names_to="All_variables", 
+                 values_to="Variable_class")
+
+potential_point %>% 
+    st_drop_geometry%>% 
+    summarise_all(class) %>%
+    pivot_longer(everything(),   
+                 names_to="All_variables", 
+                 values_to="Variable_class")
+
+tract %>% 
+    st_drop_geometry%>% 
+    summarise_all(class) %>%
+    pivot_longer(everything(),   
+                 names_to="All_variables", 
+                 values_to="Variable_class")
+
+commuting_block %>% 
+    st_drop_geometry%>% 
+    summarise_all(class) %>%
+    pivot_longer(everything(),   
+                 names_to="All_variables", 
+                 values_to="Variable_class")
+
+# ensure using a same crs
+st_crs(injury_crash)
+st_crs(potential_point)
+st_crs(tract)
+st_crs(commuting_block)
+
+tract = tract %>% 
+  st_transform(.,st_crs(injury_crash))
+```
+
+###03 Data screening and rapid visualization
+The city’s administrative divisions were taken from census data, and since the research was focused on commuting and transportation, the visualization I ultimately chose used commuter blocks to quickly visualize where all the accidents occurred.
+```{r}
+## Wrangling data
+# Filter data only to Charlotte City
+charlotte_tracts <- tract %>%
+  filter(STATEFP == "37" & COUNTYFP == "119")
+
+# quick map
+tmap_mode("plot")
+tm_shape(commuting_block) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(injury_crash) +
+  tm_dots(col = "blue",size=0.2)+ 
+  tm_layout(main.title = "Location of the Accident",
+		main.title.position = "center")
+
+tm_shape(commuting_block) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(potential_point) +
+  tm_dots(col = "blue",size=0.5) + 
+  tm_layout(title = "Proposed Safe Streets for All Project")
+```
+
+The first picture: There are 789 accidents in total, with more accidents in the central city and fewer in the suburbs; there are no accidents in the north and southeast, and it seems that the space is concentrated in the urban area. The second picture: There are 22 planned safe streets in total, which are relatively scattered.
+
+###04 Screening for project-related injuries
+I chose the last five years of data because incidents that may be too old are caused by other things, such as road disrepair that has been repaired, outdated transportation and traffic conditions, etc.
+Then I filtered the accidents directly and indirectly related to pedestrian safety in CRASH_TYPE: 
+1. "Pedestrian": Accidents directly involving pedestrians
+2. "Pedalcyclist": Involving cyclists, who are not pedestrians but are also vulnerable road users.
+Other types of accidents may indirectly affect pedestrian safety, such as:
+1. "Left turn, same roadway" and "Left turn, different roadways": Conflicts with pedestrians may occur when turning left, especially at intersections.
+2. "Right turn, same roadway" and "Right turn, different roadways": Conflicts with pedestrians may also occur when turning right.
+3. "Crossed centerline/median": Accidents crossing the centerline or median may involve pedestrians crossing the road.
+4. "Fixed object"": Collisions with fixed objects (such as trees, lamp posts, etc.) may occur when pedestrians are crossing the road or walking on the side of the road.
+5. "Ran off road right", "Ran off road left" and "Ran off road straight ahead": Vehicles running off the road may affect pedestrians, especially when pedestrians are walking on the roadside or waiting for public transportation. 
+The first two are directly related to pedestrians, and the others are indirectly related.
+Then, visualize the filtered data.
+```{r}
+## filter accident event
+unique(injury_crash$CRASH_TYPE) # check crash type
+
+# Screening pedestrian accidents
+Pedestrian_crash = injury_crash %>% 
+  filter(DATE_VAL_Y %in% c(2023,2022,2021,2020,2019) )  %>% 
+  filter(CRASH_TYPE %in% c("Pedestrian","Pedalcyclist","Left turn, same roadway" ,"Left turn, different roadways","Right turn, same roadway","Right turn, different roadways","Crossed centerline/median","Fixed object","Ran off road right","Ran off road left","Ran off road straight ahead"))
+
+# quick map
+tmap_mode("plot")
+tm_shape(commuting_block) +
+  tm_polygons(col = NA, alpha = 0.5) +
+tm_shape(Pedestrian_crash) +
+  tm_dots(col = "blue",size=0.2)+ 
+  tm_layout(main.title = "Location of the Pedestrian Accident",
+		main.title.position = "center")
+```
+It can be seen that the city center is still very concentrated, but the suburbs are not so concentrated, which makes the number of accidents appear to be relatively small.
+
+###05 Kernel Density Analysis
+The original data is in m units, so I can directly perform kernel density analysis. So I created an observation window, then created sp and spp objects, and finally drew a kernel density graph.
+```{r}
+#Create observation window
+window <- as.owin(commuting_block)
+
+#create a sp object
+Pedestrian_crash_sp <- Pedestrian_crash %>%
+  as(., 'Spatial')
+
+#create a ppp object
+Pedestrian_crash_sp.ppp <- ppp(x=Pedestrian_crash_sp@coords[,1],
+                          y=Pedestrian_crash_sp@coords[,2],
+                          window=window)
+
+# kernel density analysis,
+Pedestrian_crash_sp.ppp %>%
+  density(., sigma=2000) %>%
+  plot()
+```
+
+The brightest areas (yellow to red) in the figure represent the areas with the highest concentration of pedestrian incidents. These areas are likely to be high-incidence areas for pedestrian accidents, which means that pedestrian accidents occur frequently in these commuting areas. Since they are in the city center, it may be because everyone works in the city center and rushes to work.
+
+Dark blue areas indicate fewer pedestrian incidents. Residents in these areas are less likely to face accidents, which may be due to smoother traffic, good infrastructure, low passenger flow, etc.
+
+From the distribution in the figure, it can be seen that pedestrian accidents tend to concentrate in specific commuting areas. This trend is mainly in the city center, but this trend is still relatively scattered and independent among various commuting areas. Next, it is necessary to analyze this spatial aggregation to test whether it is significant.
+
+###06 Draw a classification density map
+Plotting a density map can help you better understand the clustering results and reveal spatial distribution patterns in the data, because the density of accident events is relatively fair and will not be affected by the size of the commuting area.
+```{r}
+## Spatial Autocorrelation
+points_sf_joined <- commuting_block%>%
+  mutate(n = lengths(st_intersects(., Pedestrian_crash)))%>%
+  janitor::clean_names()%>%
+  mutate(area=st_area(.))%>%
+  mutate(density=n/area)
+
+
+boxplot(points_sf_joined$n)
+
+# quick map
+tm_shape(points_sf_joined) +
+    tm_polygons("density",
+        style="jenks",
+        palette="PuOr",
+        title="Accident density")
+```
+The distribution of values can be observed through the box plot. It shows most commuting areas have no data, and a few areas have 8 pedestrian accidents, which is a large number. The specific spatial distribution of these areas can be seen through the graded density map. Pedestrian accidents have shown local clustering in some areas, mostly in the city center, but similar effects have been found in the suburbs in the southwest.
+
+###07 Calculate Moran's I
+To check the significance of spatial clustering, I used global Moran. It is used to detect whether a certain characteristic value of spatial units (such as plots, administrative areas, etc.) is spatially correlated with each other as a whole.
+
+First, the centroid was extracted and the spatial weight matrix was established using the adjacency relationship. Then, the created spatial weight matrix was used to perform the Moran test.
+```{r}
+coordsW <- points_sf_joined%>%
+  st_centroid()%>%
+  st_geometry()
+# plot(coordsW,axes=TRUE)
+
+# find neighbours
+community_nb <- points_sf_joined %>%
+  poly2nb(., queen=T)
+ summary(community_nb) 
+
+# #plot them
+# plot(community_nb, st_geometry(coordsW), col="red")
+# #add a map underneath
+# plot(points_sf_joined$geometry, add=T)
+
+# make weight matrix
+community_nb.lw <- community_nb %>%
+  nb2mat(., style="W")
+sum(community_nb.lw)
+
+# make weight list for Moran's I
+community_nb.lw <- community_nb %>%
+  nb2listw(., style="W")
+
+# calculate global moran'1
+Global_Density <- points_sf_joined %>%
+  pull(density) %>%
+  as.vector()%>%
+  moran.test(., community_nb.lw)
+
+Global_Density
+```
+The results show that Moran' l's statistic value is 0.2276, indicating that there is a slight positive spatial autocorrelation in space, which means that the occurrence of pedestrian events is not random. p-value < 2.2e-16 is lower than 0.05, so the null hypothesis is rejected and the alternative hypothesis is accepted. There is significant spatial clustering.
+
+### 08 Calculate local Moran'I
+
+After understanding the global spatial aggregation, I hope to analyze the cold/hot spots of pedestrian accident events, so I calculated the local Moran I. This can help us identify the distribution heterogeneity of pedestrian incidents in different commuting areas and identify local high-value clusters and low-value clusters.
+```{r}
+# calculate local moran
+Local_density <- points_sf_joined %>%
+  pull(density) %>%
+  as.vector()%>%
+  localmoran(., community_nb.lw)%>%
+  as_tibble()
+Local_density
+
+# plot local moran and potential safe street
+points_sf_joined <- points_sf_joined %>%
+  mutate(density_I =as.numeric(Local_density$Ii))%>%
+  mutate(density_Iz =as.numeric(Local_density$Z.Ii))
+
+summary(points_sf_joined$density_Iz)
+ 
+breaks <-c(-10,-2.58,-1.96,-1.65,1.65,1.96,2.58,10)
+
+library(RColorBrewer)
+MoranColours<- rev(brewer.pal(8, "RdGy"))
+
+tm_shape(points_sf_joined) +
+    tm_polygons("density_Iz",
+        style="fixed",
+        breaks=breaks,
+        palette=MoranColours,
+        midpoint=NA,
+        title="Local Moran's I, Acciendents",
+        position = "bottomright") +
+    tm_shape(potential_point) +
+    tm_dots(col = "blue",size=0.5)
+
+```
+The calculated Z-score ranges from -5.4 to 6.8.
+
+Areas with Z-scores greater than +1.65 or less than -1.65 indicate that pedestrian incidents are not randomly distributed in these areas, and may be affected by some basic conditions or traffic conditions in the area, requiring human intervention. Z-scores greater than +1.65 are high-value clustered areas, where pedestrian accidents occur far more than in other areas. Areas with z-scores less than -1.65 have significantly fewer accidents and do not require much human intervention.
+
+Looking at the drawn mapping, areas with standard deviations of \>2.58 or \<-2.58 from the mean are significant at the 99% level, while areas with 1.96-2.58 and -2.58 to -1.96 are significant at the 95% level. Therefore, the spatial clustering of some areas is not accidental. Superimposing the locations of the safe streets planned for this project, it can be seen that the safe street plans in the downtown area are all located in spaces with high pedestrian accident rates, and the location selection is good. However, in suburban areas, accidents are not frequent, perhaps because pedestrian traffic is better. Considering the effective use of space facilities and funds, it is necessary to adjust these areas and construct the project in areas where the risk of pedestrian accidents is more prominent.
+
+
+###Discussion
+
+Identifying spatial patterns of accident risk that can guide the City of Charlotte in prioritizing intersections for future upgrades is critical, especially given the limited funding available. Targeted interventions in areas with high pedestrian accident rates, such as safety street improvements, provide a focused approach to addressing the issue.
+
+In this study, kernel density analysis was applied to identify areas of spatial clustering, providing an initial view of the spatial distribution of accidents. Subsequently, Moran’s I and Local Indicators of Spatial Association (LISA) were used to test the statistical significance of these spatial patterns. The final visualized results examined clustering across different regions, helping to identify intersections that should be prioritized for upgrades.
+
+However, this study has limitations. It does not yet explore how these upgrades could reduce accident rates, nor does it incorporate socio-economic factors, meteorological conditions (e.g., nighttime, heavy rain, fog), or specific causes of accidents to address critical factors contributing to pedestrian accidents. For instance, conditions such as heavy rain or fog are common in daily life and should be considered in future research. Additionally, the dataset used in this study is relatively small, covering limited years. Including more years of data could enhance the analysis. Furthermore, some regions may have underreported accidents, which could impact the accuracy of the results.
+
+Additional measures could also positively impact safe street initiatives. These include enhancing pedestrian safety education, implementing traffic management policies in specific areas (e.g., adjusting traffic light timing during peak hours), improving sidewalk design, and increasing nighttime lighting. Community engagement is another essential aspect of safe street initiatives. Collecting residents’ opinions and suggestions on traffic safety can provide a more comprehensive understanding of accident causes and inform more effective improvement measures. Future studies on traffic planning should consider incorporating community input on pedestrian accident causes, along with secondary data collection, to simulate spatial regression models and quantitatively guide transportation planning. In addition, hot spot analysis (Getis-Ord Gi*) can also be used to identify significant hot spots. If I have more time, I will also use spatial regression analysis to explore the driving factors or predict distribution patterns of accidents, as well as machine learning methods (such as random forests) to predict potential high-risk areas and compare them with existing clustering patterns.
+
+Overall, this study successfully identified spatial clustering patterns of pedestrian accidents in Charlotte through kernel density analysis and spatial autocorrelation methods, supporting the prioritization of safe street upgrades. Future research incorporating socio-economic data, urban planning policies, and traffic flow dynamics could provide a more comprehensive understanding of the spatial distribution of pedestrian accidents.
