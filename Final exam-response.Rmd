@@ -195,4 +195,37 @@ I_LWard_Global_Density <- points_sf_joined %>%
 I_LWard_Global_Density
 ```
 
+```{r}
+# calculate local moran
+I_LWard_Local_density <- points_sf_joined %>%
+  pull(density) %>%
+  as.vector()%>%
+  localmoran(., community_nb.lw)%>%
+  as_tibble()
+I_LWard_Local_density
+
+# plot local moran and potential safe street
+points_sf_joined <- points_sf_joined %>%
+  mutate(density_I =as.numeric(I_LWard_Local_density$Ii))%>%
+  mutate(density_Iz =as.numeric(I_LWard_Local_density$Z.Ii))
+
+summary(points_sf_joined$density_Iz)
+ 
+breaks <-c(-10,-2.58,-1.96,-1.65,1.65,1.96,2.58,10)
+
+library(RColorBrewer)
+MoranColours<- rev(brewer.pal(8, "RdGy"))
+
+tm_shape(points_sf_joined) +
+    tm_polygons("density_Iz",
+        style="fixed",
+        breaks=breaks,
+        palette=MoranColours,
+        midpoint=NA,
+        title="Local Moran's I, Acciendents",
+        position = "bottomright") +
+    tm_shape(potential_point) +
+    tm_dots(col = "blue",size=0.5)
+```
+
 ## Initial project scope
